@@ -7,12 +7,12 @@
 
 struct Point
 {
-    double x, y;
-
     double operator[](int idx) const
     {
         return idx % 2 == 0 ? x : y;
     }
+
+    double x, y;
 };
 
 double dist2(const Point& p1, const Point& p2)

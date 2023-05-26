@@ -40,12 +40,12 @@ TEST_CASE("Test")
 
     for (int i = 0; i < count; ++i)
     {
-        points.emplace_back(Prand(-10000, 10000), Prand(-10000, 10000));
+        points.emplace_back(Point{ Prand(-10000, 10000), Prand(-10000, 10000) });
     }
 
     // Target point
     // Srand(unsigned int(time(0)));
-    Point target = { Prand(-10000, 10000), Prand(-10000, 10000) };
+    Point target{ Prand(-10000, 10000), Prand(-10000, 10000) };
 
     Timer timer;
 
@@ -80,7 +80,7 @@ TEST_CASE("Test")
     std::cout << "NN by tree\t: (" << nn->point.x << ", " << nn->point.y << ")" << std::endl;
     std::cout << "NN by BF\t: (" << cp.x << ", " << cp.y << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "Points count\t: " << count << std::endl;
+    std::cout << "Number of points: " << count << std::endl;
     std::cout << "Kd-tree build\t: " << timer.Get() * 1000 << "ms" << std::endl;
     std::cout << "BF search\t: " << timer.Get() * 1000 << "ms" << std::endl;
     std::cout << "Kd-tree search\t: " << timer.Get() * 1000 << "ms" << std::endl;

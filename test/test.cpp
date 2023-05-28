@@ -70,23 +70,25 @@ TEST_CASE("Test")
     timer.Mark();
 
     // Nearest neighbor
-    Node* nn = findNearestNeighbor(root, target);
+    double nd = DBL_MAX;
+    Node* nn;
+    findNearestNeighbor(root, target, &nn, &nd);
 
     timer.Mark();
 
     // Print
-    std::cout << "Target point\t: (" << target.x << ", " << target.y << ")" << std::endl;
+    std::cout << "Target point\t: (" << target[0] << ", " << target[1] << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "NN by tree\t: (" << nn->point.x << ", " << nn->point.y << ")" << std::endl;
-    std::cout << "NN by BF\t: (" << cp.x << ", " << cp.y << ")" << std::endl;
+    std::cout << "NN by tree\t: (" << nn->point[0] << ", " << nn->point[1] << ")" << std::endl;
+    std::cout << "NN by BF\t: (" << cp[0] << ", " << cp[1] << ")" << std::endl;
     std::cout << std::endl;
     std::cout << "Number of points: " << count << std::endl;
     std::cout << "Kd-tree build\t: " << timer.Get() * 1000 << "ms" << std::endl;
     std::cout << "BF search\t: " << timer.Get() * 1000 << "ms" << std::endl;
     std::cout << "Kd-tree search\t: " << timer.Get() * 1000 << "ms" << std::endl;
 
-    REQUIRE_EQ(cp.x, nn->point.x);
-    REQUIRE_EQ(cp.y, nn->point.y);
+    REQUIRE_EQ(cp[0], nn->point[0]);
+    REQUIRE_EQ(cp[1], nn->point[1]);
 
     deleteKdTree(root);
 }

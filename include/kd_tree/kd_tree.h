@@ -9,25 +9,28 @@ struct Point
 {
     double operator[](int idx) const
     {
-        return idx % 2 == 0 ? x : y;
+        assert(idx < 2);
+        return data[idx];
     }
 
-    double x, y;
+    double data[2];
 };
 
 double dist2(const Point& p1, const Point& p2)
 {
-    double dx = p1.x - p2.x;
-    double dy = p1.y - p2.y;
+    double d = 0.0;
 
-    return dx * dx + dy * dy;
+    for (int i = 0; i < 2; ++i)
+    {
+        d += (p1[i] - p2[i]) * (p1[i] - p2[i]);
+    }
+
+    return d;
 }
 
 struct Node
 {
-    Point point;
-    Node* left;
-    Node* right;
+    Node() = default;
 
     Node(const Point& p)
         : point{ p }
@@ -35,6 +38,10 @@ struct Node
         , right{ nullptr }
     {
     }
+
+    Point point;
+    Node* left;
+    Node* right;
 };
 
 Node* buildKdTree(std::vector<Point>& points, int depth = 0)
@@ -45,11 +52,12 @@ Node* buildKdTree(std::vector<Point>& points, int depth = 0)
     }
 
     int axis = depth % 2;
-
     size_t mid = points.size() / 2;
-    std::nth_element(points.begin(), points.begin() + mid, points.end(),
-                     [axis](const Point& a, const Point& b) { return (axis == 0) ? a.x < b.x : a.y < b.y; });
 
+    std::nth_element(points.begin(), points.begin() + mid, points.end(),
+                     [axis](const Point& a, const Point& b) { return a[axis] < b[axis]; });
+
+    // Create node
     void* mem = malloc(sizeof(Node));
     Node* node = new (mem) Node(points[mid]);
 
@@ -62,89 +70,46 @@ Node* buildKdTree(std::vector<Point>& points, int depth = 0)
     return node;
 }
 
-Node* closest(Node* n1, Node* n2, const Point& target)
-{
-    assert(n1 != nullptr || n2 != nullptr);
-
-    if (n1 == nullptr)
-    {
-        return n2;
-    }
-    if (n2 == nullptr)
-    {
-        return n1;
-    }
-
-    double d1 = dist2(n1->point, target);
-    double d2 = dist2(n2->point, target);
-
-    return d1 < d2 ? n1 : n2;
-}
-
-Node* findNearestNeighbor(Node* root, const Point& target, int depth = 0)
+void findNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth = 0)
 {
     if (root == nullptr)
     {
-        return nullptr;
+        return;
     }
 
-    Node* next = nullptr;
-    Node* other = nullptr;
+    double d = dist2(target, root->point);
+    if (d < *minDist)
+    {
+        *minDist = d;
+        *nearest = root;
+    }
+
+    Node* next;
+    Node* other;
 
     // Compare axis for current depth and find next branch to descend
     int axis = depth % 2;
-    if (axis == 0)
+    if (target[axis] < root->point[axis])
     {
-        if (target.x < root->point.x)
-        {
-            next = root->left;
-            other = root->right;
-        }
-        else
-        {
-            next = root->right;
-            other = root->left;
-        }
+        next = root->left;
+        other = root->right;
     }
     else
     {
-        if (target.y < root->point.y)
-        {
-            next = root->left;
-            other = root->right;
-        }
-        else
-        {
-            next = root->right;
-            other = root->left;
-        }
+        next = root->right;
+        other = root->left;
     }
 
     // Recurse down the branch that's best according to the current depth
-    Node* nearest = findNearestNeighbor(next, target, depth + 1);
-    Node* best = closest(nearest, root, target);
-
-    double radius2 = dist2(target, best->point);
+    findNearestNeighbor(next, target, nearest, minDist, depth + 1);
 
     // We may need to check the other side of the tree.
     // If the other side is closer than the radius, then we must recurse to the other side as well.
-    double border;
-    if (axis == 0)
+    double border = target[axis] - root->point[axis];
+    if (*minDist >= border * border)
     {
-        border = target.x - root->point.x;
+        findNearestNeighbor(other, target, nearest, minDist, depth + 1);
     }
-    else
-    {
-        border = target.y - root->point.y;
-    }
-
-    if (radius2 >= border * border)
-    {
-        nearest = findNearestNeighbor(other, target, depth + 1);
-        best = closest(nearest, best, target);
-    }
-
-    return best;
 }
 
 void deleteKdTree(Node* root)

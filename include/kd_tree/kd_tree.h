@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <numeric>
+#include <queue>
 #include <vector>
 
 inline size_t compute_size(size_t n)
@@ -113,6 +114,22 @@ public:
         QueryRadius(root, target, radius * radius, callback, 0);
     }
 
+    template <typename T>
+    void QueryKNearestNeighbors(const Point& target, int k, T* callback)
+    {
+        assert(root != nullptr);
+
+        std::priority_queue<std::pair<double, const Node*>> pq;
+
+        QueryKNearestNeighbors(root, target, k, pq, 0);
+
+        while (!pq.empty())
+        {
+            callback->QueryKNearestNeighborsCallback(pq.top().second, pq.top().first);
+            pq.pop();
+        }
+    }
+
     const Node* GetRootNode() const
     {
         return root;
@@ -200,7 +217,7 @@ private:
         double d = dist2(target, root->point);
         if (d < radius2)
         {
-            callback->QueryRadiusCallback(root, d);
+            callback->QueryRadiusCallback(static_cast<const Node*>(root), d);
         }
 
         Node* next;
@@ -225,6 +242,48 @@ private:
         if (radius2 > border * border)
         {
             QueryRadius(other, target, radius2, callback, depth + 1);
+        }
+    }
+
+    void QueryKNearestNeighbors(
+        Node* root, const Point& target, int k, std::priority_queue<std::pair<double, const Node*>>& pq, int depth)
+    {
+        if (root == nullptr)
+        {
+            return;
+        }
+
+        double d = dist2(target, root->point);
+        if (pq.size() < k || d < pq.top().first)
+        {
+            pq.emplace(d, root);
+            if (pq.size() > k)
+            {
+                pq.pop();
+            }
+        }
+
+        int axis = depth % K;
+        Node* next;
+        Node* other;
+
+        if (target[axis] < root->point[axis])
+        {
+            next = root->left;
+            other = root->right;
+        }
+        else
+        {
+            next = root->right;
+            other = root->left;
+        }
+
+        QueryKNearestNeighbors(next, target, k, pq, depth + 1);
+
+        double border = target[axis] - root->point[axis];
+        if (pq.size() < k || border * border < pq.top().first)
+        {
+            QueryKNearestNeighbors(other, target, k, pq, depth + 1);
         }
     }
 

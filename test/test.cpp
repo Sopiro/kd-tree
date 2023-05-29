@@ -120,7 +120,7 @@ TEST_CASE("Radius query")
 
     struct TempCallback
     {
-        void QueryRadiusCallback(node* node, double distance2)
+        void QueryRadiusCallback(const node* node, double distance2)
         {
             double distance = sqrt(distance2);
             REQUIRE_EQ(distance < r, true);
@@ -157,5 +157,48 @@ TEST_CASE("Radius query")
     std::cout << "Radius query" << std::endl;
     std::cout << "Number of points: " << count << std::endl;
     std::cout << "BF query\t: " << timer.Get() * 1000 << "ms" << std::endl;
+    std::cout << "Kd-tree query\t: " << timer.Get() * 1000 << "ms" << std::endl;
+}
+
+TEST_CASE("K-Nearest neighbor query")
+{
+    int count = 1000000;
+
+    using point = KDTree<2>::Point;
+    using node = KDTree<2>::Node;
+
+    std::vector<point> points(count);
+
+    for (int i = 0; i < count; ++i)
+    {
+        points[i][0] = Prand(-10000, 10000);
+        points[i][1] = Prand(-10000, 10000);
+    }
+
+    // Build KD-tree
+    KDTree<2> tree(points);
+
+    point target{ Prand(-10000, 10000), Prand(-10000, 10000) };
+
+    std::cout << "\n----------------------\n" << std::endl;
+    std::cout << "K-Nearest neighbor query" << std::endl;
+
+    struct TempCallback
+    {
+        void QueryKNearestNeighborsCallback(const node* node, double distance2)
+        {
+            double distance = sqrt(distance2);
+            std::cout << distance << std::endl;
+        }
+
+    } callback;
+
+    Timer timer;
+
+    tree.QueryKNearestNeighbors(target, 10, &callback);
+
+    timer.Mark();
+
+    std::cout << "Number of points: " << count << std::endl;
     std::cout << "Kd-tree query\t: " << timer.Get() * 1000 << "ms" << std::endl;
 }

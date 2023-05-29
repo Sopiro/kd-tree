@@ -126,7 +126,7 @@ private:
             return nullptr;
         }
 
-        int axis = depth % 2;
+        int axis = depth % K;
         int mid = count / 2;
 
         std::nth_element(indices, indices + mid, indices + count,
@@ -165,7 +165,7 @@ private:
         Node* other;
 
         // Compare axis for current depth and find next branch to descend
-        int axis = depth % 2;
+        int axis = depth % K;
         if (target[axis] < root->point[axis])
         {
             next = root->left;
@@ -207,7 +207,7 @@ private:
         Node* other;
 
         // Compare axis for current depth and find next branch to descend
-        int axis = depth % 2;
+        int axis = depth % K;
         if (target[axis] < root->point[axis])
         {
             next = root->left;

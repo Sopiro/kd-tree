@@ -94,15 +94,23 @@ public:
         root = nullptr;
     }
 
-    const Node* FindNearestNeighbor(const Point& target)
+    const Node* QueryNearestNeighbor(const Point& target)
     {
         assert(root != nullptr);
 
         Node* nn;
         double d = DBL_MAX;
-        FindNearestNeighbor(root, target, &nn, &d, 0);
+        QueryNearestNeighbor(root, target, &nn, &d, 0);
 
         return nn;
+    }
+
+    template <typename T>
+    void QueryRadius(const Point& target, double radius, T* callback)
+    {
+        assert(root != nullptr);
+
+        QueryRadius(root, target, radius * radius, callback, 0);
     }
 
     const Node* GetRootNode() const
@@ -139,7 +147,7 @@ private:
         return &node;
     }
 
-    void FindNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth)
+    void QueryNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth)
     {
         if (root == nullptr)
         {
@@ -170,14 +178,53 @@ private:
         }
 
         // Recurse down the branch that's best according to the current depth
-        FindNearestNeighbor(next, target, nearest, minDist, depth + 1);
+        QueryNearestNeighbor(next, target, nearest, minDist, depth + 1);
 
         // We may need to check the other side of the tree.
         // If the other side is closer than the radius, then we must recurse to the other side as well.
         double border = target[axis] - root->point[axis];
-        if (*minDist >= border * border)
+        if (*minDist > border * border)
         {
-            FindNearestNeighbor(other, target, nearest, minDist, depth + 1);
+            QueryNearestNeighbor(other, target, nearest, minDist, depth + 1);
+        }
+    }
+
+    template <typename T>
+    void QueryRadius(Node* root, const Point& target, double radius2, T* callback, int depth)
+    {
+        if (root == nullptr)
+        {
+            return;
+        }
+
+        double d = dist2(target, root->point);
+        if (d < radius2)
+        {
+            callback->QueryRadiusCallback(root, d);
+        }
+
+        Node* next;
+        Node* other;
+
+        // Compare axis for current depth and find next branch to descend
+        int axis = depth % 2;
+        if (target[axis] < root->point[axis])
+        {
+            next = root->left;
+            other = root->right;
+        }
+        else
+        {
+            next = root->right;
+            other = root->left;
+        }
+
+        QueryRadius(next, target, radius2, callback, depth + 1);
+
+        double border = target[axis] - root->point[axis];
+        if (radius2 > border * border)
+        {
+            QueryRadius(other, target, radius2, callback, depth + 1);
         }
     }
 

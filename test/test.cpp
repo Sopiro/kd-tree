@@ -32,7 +32,7 @@ TEST_CASE("Memory leak check")
 #endif
 }
 
-TEST_CASE("Test")
+TEST_CASE("Nearest neighbor query")
 {
     int count = 1000000;
 
@@ -75,12 +75,14 @@ TEST_CASE("Test")
     timer.Mark();
 
     // Nearest neighbor
-    const node* nn = tree.FindNearestNeighbor(target);
+    const node* nn = tree.QueryNearestNeighbor(target);
     const point& np = nn->point;
 
     timer.Mark();
 
     // Print
+    std::cout << "\n----------------------\n" << std::endl;
+    std::cout << "Nearest neighbor query" << std::endl;
     std::cout << "Target point\t: (" << target[0] << ", " << target[1] << ")" << std::endl;
     std::cout << std::endl;
     std::cout << "NN by tree\t: (" << np[0] << ", " << np[1] << ")" << std::endl;
@@ -88,9 +90,72 @@ TEST_CASE("Test")
     std::cout << std::endl;
     std::cout << "Number of points: " << count << std::endl;
     std::cout << "Kd-tree build\t: " << timer.Get() * 1000 << "ms" << std::endl;
-    std::cout << "BF search\t: " << timer.Get() * 1000 << "ms" << std::endl;
-    std::cout << "Kd-tree search\t: " << timer.Get() * 1000 << "ms" << std::endl;
+    std::cout << "BF query\t: " << timer.Get() * 1000 << "ms" << std::endl;
+    std::cout << "Kd-tree query\t: " << timer.Get() * 1000 << "ms" << std::endl;
 
     REQUIRE_EQ(bp[0], np[0]);
     REQUIRE_EQ(bp[1], np[1]);
+}
+
+TEST_CASE("Radius query")
+{
+    int count = 1000000;
+
+    using point = KDTree<2>::Point;
+    using node = KDTree<2>::Node;
+
+    std::vector<point> points(count);
+
+    for (int i = 0; i < count; ++i)
+    {
+        points[i][0] = Prand(-10000, 10000);
+        points[i][1] = Prand(-10000, 10000);
+    }
+
+    // Build KD-tree
+    KDTree<2> tree(points);
+
+    point target{ Prand(-10000, 10000), Prand(-10000, 10000) };
+    double radius = 100.0;
+
+    struct TempCallback
+    {
+        void QueryRadiusCallback(node* node, double distance2)
+        {
+            double distance = sqrt(distance2);
+            REQUIRE_EQ(distance < r, true);
+            ++count;
+        }
+
+        double r;
+        int count;
+    } callback;
+
+    callback.r = radius;
+    callback.count = 0;
+
+    Timer timer;
+
+    // Brute force
+    int bfCount = 0;
+    for (int i = 0; i < count; ++i)
+    {
+        if (tree.dist2(target, points[i]) < radius * radius)
+        {
+            ++bfCount;
+        }
+    }
+
+    timer.Mark();
+
+    tree.QueryRadius(target, radius, &callback);
+
+    timer.Mark();
+
+    REQUIRE_EQ(callback.count, bfCount);
+    std::cout << "\n----------------------\n" << std::endl;
+    std::cout << "Radius query" << std::endl;
+    std::cout << "Number of points: " << count << std::endl;
+    std::cout << "BF query\t: " << timer.Get() * 1000 << "ms" << std::endl;
+    std::cout << "Kd-tree query\t: " << timer.Get() * 1000 << "ms" << std::endl;
 }

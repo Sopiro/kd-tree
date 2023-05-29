@@ -75,7 +75,7 @@ TEST_CASE("Nearest neighbor query")
     timer.Mark();
 
     // Nearest neighbor
-    const node* nn = tree.QueryNearestNeighbor(target);
+    const node* nn = tree.QueryNearestNeighbor(target).node;
     const point& np = nn->point;
 
     timer.Mark();
@@ -120,7 +120,7 @@ TEST_CASE("Radius query")
 
     struct TempCallback
     {
-        void QueryRadiusCallback(const node* node, double distance2)
+        void QueryRadiusCallback(double distance2, const node* node)
         {
             double distance = sqrt(distance2);
             REQUIRE_EQ(distance < r, true);
@@ -183,22 +183,25 @@ TEST_CASE("K-Nearest neighbor query")
     std::cout << "\n----------------------\n" << std::endl;
     std::cout << "K-Nearest neighbor query" << std::endl;
 
-    struct TempCallback
-    {
-        void QueryKNearestNeighborsCallback(const node* node, double distance2)
-        {
-            double distance = sqrt(distance2);
-            std::cout << distance << std::endl;
-        }
-
-    } callback;
-
     Timer timer;
 
-    tree.QueryKNearestNeighbors(target, 10, &callback);
+    int k = 10;
+    auto v = tree.QueryKNearestNeighbors(target, k);
 
     timer.Mark();
 
+    // It returns max heap
+    REQUIRE_EQ(std::is_heap(v.begin(), v.end()), true);
+    REQUIRE_EQ(v.size(), k);
+
     std::cout << "Number of points: " << count << std::endl;
     std::cout << "Kd-tree query\t: " << timer.Get() * 1000 << "ms" << std::endl;
+
+    for (int i = 0; i < k; ++i)
+    {
+        std::cout << sqrt(v.front().distance2) << std::endl;
+
+        std::pop_heap(v.begin(), v.end());
+        v.pop_back();
+    }
 }

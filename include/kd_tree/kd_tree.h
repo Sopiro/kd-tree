@@ -4,7 +4,6 @@
 #include <cassert>
 #include <cmath>
 #include <numeric>
-#include <queue>
 #include <vector>
 
 inline size_t compute_size(size_t n)
@@ -61,6 +60,17 @@ public:
         Node* right;
     };
 
+    struct QueryResult
+    {
+        bool operator<(const QueryResult& rhs)
+        {
+            return distance2 < rhs.distance2;
+        }
+
+        double distance2;
+        const Node* node;
+    };
+
     KDTree(const std::vector<Point>& points)
     {
         BuildTree(points);
@@ -95,7 +105,7 @@ public:
         root = nullptr;
     }
 
-    const Node* QueryNearestNeighbor(const Point& target)
+    QueryResult QueryNearestNeighbor(const Point& target)
     {
         assert(root != nullptr);
 
@@ -103,7 +113,20 @@ public:
         double d = DBL_MAX;
         QueryNearestNeighbor(root, target, &nn, &d, 0);
 
-        return nn;
+        return QueryResult{ d, nn };
+    }
+
+    std::vector<QueryResult> QueryKNearestNeighbors(const Point& target, int k)
+    {
+        assert(root != nullptr);
+
+        // Priority queue
+        std::vector<QueryResult> pq;
+        pq.reserve(k + 1);
+
+        QueryKNearestNeighbors(root, target, k, pq, 0);
+
+        return pq;
     }
 
     template <typename T>
@@ -112,22 +135,6 @@ public:
         assert(root != nullptr);
 
         QueryRadius(root, target, radius * radius, callback, 0);
-    }
-
-    template <typename T>
-    void QueryKNearestNeighbors(const Point& target, int k, T* callback)
-    {
-        assert(root != nullptr);
-
-        std::priority_queue<std::pair<double, const Node*>> pq;
-
-        QueryKNearestNeighbors(root, target, k, pq, 0);
-
-        while (!pq.empty())
-        {
-            callback->QueryKNearestNeighborsCallback(pq.top().second, pq.top().first);
-            pq.pop();
-        }
     }
 
     const Node* GetRootNode() const
@@ -206,6 +213,50 @@ private:
         }
     }
 
+    void QueryKNearestNeighbors(Node* root, const Point& target, int k, std::vector<QueryResult>& pq, int depth)
+    {
+        if (root == nullptr)
+        {
+            return;
+        }
+
+        double d = dist2(target, root->point);
+        if (pq.size() < k || d < pq.front().distance2)
+        {
+            pq.emplace_back(d, root);
+            std::push_heap(pq.begin(), pq.end());
+
+            if (pq.size() > k)
+            {
+                std::pop_heap(pq.begin(), pq.end());
+                pq.pop_back();
+            }
+        }
+
+        Node* next;
+        Node* other;
+
+        int axis = depth % K;
+        if (target[axis] < root->point[axis])
+        {
+            next = root->left;
+            other = root->right;
+        }
+        else
+        {
+            next = root->right;
+            other = root->left;
+        }
+
+        QueryKNearestNeighbors(next, target, k, pq, depth + 1);
+
+        double border = target[axis] - root->point[axis];
+        if (pq.size() < k || border * border < pq.front().distance2)
+        {
+            QueryKNearestNeighbors(other, target, k, pq, depth + 1);
+        }
+    }
+
     template <typename T>
     void QueryRadius(Node* root, const Point& target, double radius2, T* callback, int depth)
     {
@@ -217,7 +268,7 @@ private:
         double d = dist2(target, root->point);
         if (d < radius2)
         {
-            callback->QueryRadiusCallback(static_cast<const Node*>(root), d);
+            callback->QueryRadiusCallback(d, static_cast<const Node*>(root));
         }
 
         Node* next;
@@ -242,48 +293,6 @@ private:
         if (radius2 > border * border)
         {
             QueryRadius(other, target, radius2, callback, depth + 1);
-        }
-    }
-
-    void QueryKNearestNeighbors(
-        Node* root, const Point& target, int k, std::priority_queue<std::pair<double, const Node*>>& pq, int depth)
-    {
-        if (root == nullptr)
-        {
-            return;
-        }
-
-        double d = dist2(target, root->point);
-        if (pq.size() < k || d < pq.top().first)
-        {
-            pq.emplace(d, root);
-            if (pq.size() > k)
-            {
-                pq.pop();
-            }
-        }
-
-        int axis = depth % K;
-        Node* next;
-        Node* other;
-
-        if (target[axis] < root->point[axis])
-        {
-            next = root->left;
-            other = root->right;
-        }
-        else
-        {
-            next = root->right;
-            other = root->left;
-        }
-
-        QueryKNearestNeighbors(next, target, k, pq, depth + 1);
-
-        double border = target[axis] - root->point[axis];
-        if (pq.size() < k || border * border < pq.top().first)
-        {
-            QueryKNearestNeighbors(other, target, k, pq, depth + 1);
         }
     }
 

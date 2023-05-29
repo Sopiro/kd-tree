@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <numeric>
 #include <vector>
 
 template <int K>
@@ -53,9 +54,9 @@ public:
         Node* right;
     };
 
-    KDTree(std::vector<Point>& points)
-        : root{ BuildTree(points, 0) }
+    KDTree(const std::vector<Point>& points)
     {
+        BuildTree(points);
     }
 
     ~KDTree()
@@ -63,14 +64,18 @@ public:
         DeleteTree();
     }
 
-    void BuildTree(std::vector<Point>& points)
+    void BuildTree(const std::vector<Point>& points)
     {
         if (root == nullptr)
         {
             DeleteTree();
         }
 
-        root = BuildTree(points, 0);
+        // Build tree with points indices vector to preserve original data
+        std::vector<int> indices(points.size());
+        std::iota(indices.begin(), indices.end(), 0);
+
+        root = BuildTree(points, indices.data(), (int)points.size(), 0);
     }
 
     void DeleteTree()
@@ -97,7 +102,7 @@ public:
         root = nullptr;
     }
 
-    Node* FindNearestNeighbor(const Point& target)
+    const Node* FindNearestNeighbor(const Point& target)
     {
         assert(root != nullptr);
 
@@ -108,39 +113,37 @@ public:
         return nn;
     }
 
-    Node* GetRootNode() const
+    const Node* GetRootNode() const
     {
         return root;
     }
 
 private:
-    Node* BuildTree(std::vector<Point>& points, int depth = 0)
+    Node* BuildTree(const std::vector<Point>& points, int* indices, int count, int depth)
     {
-        if (points.empty())
+        if (count <= 0)
         {
             return nullptr;
         }
 
         int axis = depth % 2;
-        size_t mid = points.size() / 2;
+        int mid = count / 2;
 
-        std::nth_element(points.begin(), points.begin() + mid, points.end(),
-                         [axis](const Point& a, const Point& b) { return a[axis] < b[axis]; });
+        std::nth_element(indices, indices + mid, indices + count,
+                         [&](int left, int right) { return points[left][axis] < points[right][axis]; });
 
         // Create node
         void* mem = malloc(sizeof(Node));
-        Node* node = new (mem) Node(points[mid]);
+        Node* node = new (mem) Node(points[indices[mid]]);
 
         // Build left and right sub trees recursively
-        std::vector<Point> leftPoints(points.begin(), points.begin() + mid);
-        std::vector<Point> rightPoints(points.begin() + mid + 1, points.end());
-        node->left = BuildTree(leftPoints, depth + 1);
-        node->right = BuildTree(rightPoints, depth + 1);
+        node->left = BuildTree(points, indices, mid, depth + 1);
+        node->right = BuildTree(points, indices + mid + 1, count - mid - 1, depth + 1);
 
         return node;
     }
 
-    void FindNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth = 0)
+    void FindNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth)
     {
         if (root == nullptr)
         {

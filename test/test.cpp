@@ -59,37 +59,38 @@ TEST_CASE("Test")
     timer.Mark();
 
     // Brute force
-    double cd = DBL_MAX;
-    point cp = target;
+    double bd = DBL_MAX;
+    point bp = target;
     for (int i = 0; i < points.size(); ++i)
     {
         double c = tree.dist2(target, points[i]);
 
-        if (c < cd)
+        if (c < bd)
         {
-            cd = c;
-            cp = points[i];
+            bd = c;
+            bp = points[i];
         }
     }
 
     timer.Mark();
 
     // Nearest neighbor
-    node* nn = tree.FindNearestNeighbor(target);
+    const node* nn = tree.FindNearestNeighbor(target);
+    const point& np = nn->point;
 
     timer.Mark();
 
     // Print
     std::cout << "Target point\t: (" << target[0] << ", " << target[1] << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "NN by tree\t: (" << nn->point[0] << ", " << nn->point[1] << ")" << std::endl;
-    std::cout << "NN by BF\t: (" << cp[0] << ", " << cp[1] << ")" << std::endl;
+    std::cout << "NN by tree\t: (" << np[0] << ", " << np[1] << ")" << std::endl;
+    std::cout << "NN by BF\t: (" << bp[0] << ", " << bp[1] << ")" << std::endl;
     std::cout << std::endl;
     std::cout << "Number of points: " << count << std::endl;
     std::cout << "Kd-tree build\t: " << timer.Get() * 1000 << "ms" << std::endl;
     std::cout << "BF search\t: " << timer.Get() * 1000 << "ms" << std::endl;
     std::cout << "Kd-tree search\t: " << timer.Get() * 1000 << "ms" << std::endl;
 
-    REQUIRE_EQ(cp[0], nn->point[0]);
-    REQUIRE_EQ(cp[1], nn->point[1]);
+    REQUIRE_EQ(bp[0], np[0]);
+    REQUIRE_EQ(bp[1], np[1]);
 }

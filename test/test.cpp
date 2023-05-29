@@ -36,29 +36,34 @@ TEST_CASE("Test")
 {
     int count = 1000000;
 
-    std::vector<Point> points(count);
+    using point = KDTree<2>::Point;
+    using node = KDTree<2>::Node;
+
+    std::vector<point> points(count);
 
     for (int i = 0; i < count; ++i)
     {
-        points.emplace_back(Point{ Prand(-10000, 10000), Prand(-10000, 10000) });
+        points[i][0] = Prand(-10000, 10000);
+        points[i][1] = Prand(-10000, 10000);
     }
 
     // Target point
     // Srand(unsigned int(time(0)));
-    Point target{ Prand(-10000, 10000), Prand(-10000, 10000) };
+    point target{ Prand(-10000, 10000), Prand(-10000, 10000) };
 
     Timer timer;
 
     // Build KD-tree
-    Node* root = buildKdTree(points);
+    KDTree<2> tree(points);
+
     timer.Mark();
 
     // Brute force
     double cd = DBL_MAX;
-    Point cp = target;
+    point cp = target;
     for (int i = 0; i < points.size(); ++i)
     {
-        double c = dist2(target, points[i]);
+        double c = tree.dist2(target, points[i]);
 
         if (c < cd)
         {
@@ -70,9 +75,7 @@ TEST_CASE("Test")
     timer.Mark();
 
     // Nearest neighbor
-    double nd = DBL_MAX;
-    Node* nn;
-    findNearestNeighbor(root, target, &nn, &nd);
+    node* nn = tree.FindNearestNeighbor(target);
 
     timer.Mark();
 
@@ -89,6 +92,4 @@ TEST_CASE("Test")
 
     REQUIRE_EQ(cp[0], nn->point[0]);
     REQUIRE_EQ(cp[1], nn->point[1]);
-
-    deleteKdTree(root);
 }

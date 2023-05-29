@@ -62,6 +62,12 @@ public:
 
     struct QueryResult
     {
+        QueryResult(double distance2, const Node* node)
+            : distance2{ distance2 }
+            , node{ node }
+        {
+        }
+
         bool operator<(const QueryResult& rhs)
         {
             return distance2 < rhs.distance2;

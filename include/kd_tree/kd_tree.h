@@ -68,7 +68,7 @@ public:
         {
         }
 
-        bool operator<(const QueryResult& rhs)
+        bool operator<(const QueryResult& rhs) const
         {
             return distance2 < rhs.distance2;
         }

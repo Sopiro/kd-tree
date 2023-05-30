@@ -178,7 +178,7 @@ inline void KDTree<K>::DeleteTree()
 }
 
 template <int K>
-inline KDTree<K>::QueryResult KDTree<K>::QueryNearestNeighbor(const Point& target)
+inline typename KDTree<K>::QueryResult KDTree<K>::QueryNearestNeighbor(const Point& target)
 {
     assert(root != nullptr);
 

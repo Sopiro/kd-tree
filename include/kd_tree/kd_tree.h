@@ -46,17 +46,30 @@ public:
 
     static double dist2(const Point& p1, const Point& p2);
 
+    // Build KD tree from given points.
     KDTree(const std::vector<Point>& points);
     ~KDTree();
 
+    // Build KD tree from given points.
+    // If a tree already exists, the original tree will be deleted.
     void BuildTree(const std::vector<Point>& points);
+
+    // Delete KD tree.
     void DeleteTree();
 
+    // Query functions.
+
+    // Returns the nearest neighbor data.
     QueryResult QueryNearestNeighbor(const Point& target);
+
+    // Returns the max-heap of K nearest neighbors results.
     std::vector<QueryResult> QueryKNearestNeighbors(const Point& target, int k);
+
+    // Callback object should implement the QueryRadiusCallback(double distance2, const Node* node) function.
     template <typename T>
     void QueryRadius(const Point& target, double radius, T* callback);
 
+    // Returns the internal tree object
     const Node* GetRootNode() const;
 
 private:
@@ -64,6 +77,7 @@ private:
 
     void QueryNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth);
     void QueryKNearestNeighbors(Node* root, const Point& target, int k, std::vector<QueryResult>& pq, int depth);
+
     template <typename T>
     void QueryRadius(Node* root, const Point& target, double radius2, T* callback, int depth);
 
@@ -234,18 +248,18 @@ inline typename KDTree<K>::Node* KDTree<K>::BuildTree(const std::vector<Point>& 
 }
 
 template <int K>
-inline void KDTree<K>::QueryNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth)
+inline void KDTree<K>::QueryNearestNeighbor(Node* node, const Point& target, Node** nearest, double* minDist, int depth)
 {
-    if (root == nullptr)
+    if (node == nullptr)
     {
         return;
     }
 
-    double d = dist2(target, root->point);
+    double d = dist2(target, node->point);
     if (d < *minDist)
     {
         *minDist = d;
-        *nearest = root;
+        *nearest = node;
     }
 
     Node* next;
@@ -253,23 +267,23 @@ inline void KDTree<K>::QueryNearestNeighbor(Node* root, const Point& target, Nod
 
     // Compare axis for current depth and find next branch to descend
     int axis = depth % K;
-    if (target[axis] < root->point[axis])
+    if (target[axis] < node->point[axis])
     {
-        next = root->left;
-        other = root->right;
+        next = node->left;
+        other = node->right;
     }
     else
     {
-        next = root->right;
-        other = root->left;
+        next = node->right;
+        other = node->left;
     }
 
     // Recurse down the branch that's best according to the current depth
     QueryNearestNeighbor(next, target, nearest, minDist, depth + 1);
 
-    // We may need to check the other side of the tree.
-    // If the other side is closer than the radius, then we must recurse to the other side as well.
-    double border = target[axis] - root->point[axis];
+    // We may need to check the other side of the tree
+    // If the other side is closer than the radius, then we must recurse to the other side as well
+    double border = target[axis] - node->point[axis];
     if (*minDist > border * border)
     {
         QueryNearestNeighbor(other, target, nearest, minDist, depth + 1);
@@ -277,17 +291,17 @@ inline void KDTree<K>::QueryNearestNeighbor(Node* root, const Point& target, Nod
 }
 
 template <int K>
-inline void KDTree<K>::QueryKNearestNeighbors(Node* root, const Point& target, int k, std::vector<QueryResult>& pq, int depth)
+inline void KDTree<K>::QueryKNearestNeighbors(Node* node, const Point& target, int k, std::vector<QueryResult>& pq, int depth)
 {
-    if (root == nullptr)
+    if (node == nullptr)
     {
         return;
     }
 
-    double d = dist2(target, root->point);
+    double d = dist2(target, node->point);
     if (pq.size() < k || d < pq.front().distance2)
     {
-        pq.emplace_back(d, root);
+        pq.emplace_back(d, node);
         std::push_heap(pq.begin(), pq.end());
 
         if (pq.size() > k)
@@ -301,20 +315,20 @@ inline void KDTree<K>::QueryKNearestNeighbors(Node* root, const Point& target, i
     Node* other;
 
     int axis = depth % K;
-    if (target[axis] < root->point[axis])
+    if (target[axis] < node->point[axis])
     {
-        next = root->left;
-        other = root->right;
+        next = node->left;
+        other = node->right;
     }
     else
     {
-        next = root->right;
-        other = root->left;
+        next = node->right;
+        other = node->left;
     }
 
     QueryKNearestNeighbors(next, target, k, pq, depth + 1);
 
-    double border = target[axis] - root->point[axis];
+    double border = target[axis] - node->point[axis];
     if (pq.size() < k || border * border < pq.front().distance2)
     {
         QueryKNearestNeighbors(other, target, k, pq, depth + 1);
@@ -323,17 +337,17 @@ inline void KDTree<K>::QueryKNearestNeighbors(Node* root, const Point& target, i
 
 template <int K>
 template <typename T>
-inline void KDTree<K>::QueryRadius(Node* root, const Point& target, double radius2, T* callback, int depth)
+inline void KDTree<K>::QueryRadius(Node* node, const Point& target, double radius2, T* callback, int depth)
 {
-    if (root == nullptr)
+    if (node == nullptr)
     {
         return;
     }
 
-    double d = dist2(target, root->point);
+    double d = dist2(target, node->point);
     if (d < radius2)
     {
-        callback->QueryRadiusCallback(d, static_cast<const Node*>(root));
+        callback->QueryRadiusCallback(d, static_cast<const Node*>(node));
     }
 
     Node* next;
@@ -341,20 +355,20 @@ inline void KDTree<K>::QueryRadius(Node* root, const Point& target, double radiu
 
     // Compare axis for current depth and find next branch to descend
     int axis = depth % K;
-    if (target[axis] < root->point[axis])
+    if (target[axis] < node->point[axis])
     {
-        next = root->left;
-        other = root->right;
+        next = node->left;
+        other = node->right;
     }
     else
     {
-        next = root->right;
-        other = root->left;
+        next = node->right;
+        other = node->left;
     }
 
     QueryRadius(next, target, radius2, callback, depth + 1);
 
-    double border = target[axis] - root->point[axis];
+    double border = target[axis] - node->point[axis];
     if (radius2 > border * border)
     {
         QueryRadius(other, target, radius2, callback, depth + 1);

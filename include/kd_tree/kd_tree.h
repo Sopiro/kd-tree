@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <numeric>
+#include <span>
 #include <vector>
 
 // Compute complete binary tree size
@@ -47,12 +48,12 @@ public:
     static double dist2(const Point& p1, const Point& p2);
 
     // Build KD tree from given points.
-    KDTree(const std::vector<Point>& points);
+    KDTree(const std::span<Point>& points);
     ~KDTree();
 
     // Build KD tree from given points.
     // If a tree already exists, the original tree will be deleted.
-    void BuildTree(const std::vector<Point>& points);
+    void BuildTree(const std::span<Point>& points);
 
     // Delete KD tree.
     void DeleteTree();
@@ -73,7 +74,7 @@ public:
     const Node* GetRootNode() const;
 
 private:
-    Node* BuildTree(const std::vector<Point>& points, int* indices, int count, int depth);
+    Node* BuildTree(const std::span<Point>& points, int* indices, int count, int depth);
 
     void QueryNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth);
     void QueryKNearestNeighbors(Node* root, const Point& target, int k, std::vector<QueryResult>& pq, int depth);
@@ -140,7 +141,7 @@ inline double KDTree<K>::dist2(const Point& p1, const Point& p2)
 }
 
 template <int K>
-inline KDTree<K>::KDTree(const std::vector<Point>& points)
+inline KDTree<K>::KDTree(const std::span<Point>& points)
 {
     BuildTree(points);
 }
@@ -152,7 +153,7 @@ inline KDTree<K>::~KDTree()
 }
 
 template <int K>
-inline void KDTree<K>::BuildTree(const std::vector<Point>& points)
+inline void KDTree<K>::BuildTree(const std::span<Point>& points)
 {
     if (root != nullptr)
     {
@@ -219,7 +220,7 @@ inline const typename KDTree<K>::Node* KDTree<K>::GetRootNode() const
 }
 
 template <int K>
-inline typename KDTree<K>::Node* KDTree<K>::BuildTree(const std::vector<Point>& points, int* indices, int count, int depth)
+inline typename KDTree<K>::Node* KDTree<K>::BuildTree(const std::span<Point>& points, int* indices, int count, int depth)
 {
     if (count <= 0)
     {

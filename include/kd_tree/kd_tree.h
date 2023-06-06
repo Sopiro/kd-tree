@@ -41,10 +41,11 @@ public:
         QueryResult(double distance2, const Node* node);
         bool operator<(const QueryResult& rhs) const;
 
-        double distance2;
+        double distance2; // Squared distance
         const Node* node;
     };
 
+    // Compute squared distance between two points.
     static double dist2(const Point& p1, const Point& p2);
 
     // Build KD tree from given points.
@@ -55,7 +56,7 @@ public:
     // If a tree already exists, the original tree will be deleted.
     void BuildTree(const std::span<Point>& points);
 
-    // Delete KD tree.
+    // Delete internal KD tree.
     void DeleteTree();
 
     // Query functions.
@@ -70,7 +71,7 @@ public:
     template <typename T>
     void QueryRadius(const Point& target, double radius, T* callback);
 
-    // Returns the internal tree object
+    // Returns the internal tree object.
     const Node* GetRootNode() const;
 
 private:
@@ -78,7 +79,6 @@ private:
 
     void QueryNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth);
     void QueryKNearestNeighbors(Node* root, const Point& target, int k, std::vector<QueryResult>& pq, int depth);
-
     template <typename T>
     void QueryRadius(Node* root, const Point& target, double radius2, T* callback, int depth);
 

@@ -101,8 +101,6 @@ int main()
 }
 ```
 
-
-
 ## Building
 - Install [CMake](https://cmake.org/install/)
 - Ensure CMake is in the system `PATH`

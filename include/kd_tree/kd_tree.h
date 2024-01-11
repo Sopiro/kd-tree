@@ -14,16 +14,16 @@ inline size_t compute_size(size_t n)
     return static_cast<size_t>(pow(2, exp));
 }
 
-template <int K>
+template <int K, typename T = float>
 class KDTree
 {
 public:
     struct Point
     {
-        double operator[](int idx) const;
-        double& operator[](int idx);
+        T operator[](int idx) const;
+        T& operator[](int idx);
 
-        double coord[K];
+        T coord[K];
         void* userData;
     };
 
@@ -38,15 +38,15 @@ public:
 
     struct QueryResult
     {
-        QueryResult(double distance2, const Node* node);
+        QueryResult(T distance2, const Node* node);
         bool operator<(const QueryResult& rhs) const;
 
-        double distance2; // Squared distance
+        T distance2; // Squared distance
         const Node* node;
     };
 
     // Compute squared distance between two points.
-    static double dist2(const Point& p1, const Point& p2);
+    static T dist2(const Point& p1, const Point& p2);
 
     // Build KD tree from given points.
     KDTree(const std::span<Point>& points);
@@ -67,9 +67,9 @@ public:
     // Returns the max-heap of K nearest neighbors results.
     std::vector<QueryResult> QueryKNearestNeighbors(const Point& target, int k);
 
-    // Callback object should implement the QueryRadiusCallback(double distance2, const Node* node) function.
-    template <typename T>
-    void QueryRadius(const Point& target, double radius, T* callback);
+    // Callback object should implement the QueryRadiusCallback(T distance2, const Node* node) function.
+    template <typename F>
+    void QueryRadius(const Point& target, T radius, F* callback);
 
     // Returns the internal tree object.
     const Node* GetRootNode() const;
@@ -77,10 +77,10 @@ public:
 private:
     Node* BuildTree(const std::span<Point>& points, int* indices, int count, int depth);
 
-    void QueryNearestNeighbor(Node* root, const Point& target, Node** nearest, double* minDist, int depth);
+    void QueryNearestNeighbor(Node* root, const Point& target, Node** nearest, T* minDist, int depth);
     void QueryKNearestNeighbors(Node* root, const Point& target, int k, std::vector<QueryResult>& pq, int depth);
-    template <typename T>
-    void QueryRadius(Node* root, const Point& target, double radius2, T* callback, int depth);
+    template <typename F>
+    void QueryRadius(Node* root, const Point& target, T radius2, F* callback, int depth);
 
     Node* root;
     std::vector<Node> nodes;
@@ -92,45 +92,45 @@ private:
 
 // Implementations
 
-template <int K>
-inline double KDTree<K>::Point::operator[](int idx) const
+template <int K, typename T>
+inline T KDTree<K, T>::Point::operator[](int idx) const
 {
     assert(idx < K);
     return coord[idx];
 }
 
-template <int K>
-inline double& KDTree<K>::Point::operator[](int idx)
+template <int K, typename T>
+inline T& KDTree<K, T>::Point::operator[](int idx)
 {
     assert(idx < K);
     return coord[idx];
 }
 
-template <int K>
-inline KDTree<K>::Node::Node(const Point& p)
+template <int K, typename T>
+inline KDTree<K, T>::Node::Node(const Point& p)
     : point{ p }
     , left{ nullptr }
     , right{ nullptr }
 {
 }
 
-template <int K>
-inline KDTree<K>::QueryResult::QueryResult(double distance2, const Node* node)
+template <int K, typename T>
+inline KDTree<K, T>::QueryResult::QueryResult(T distance2, const Node* node)
     : distance2{ distance2 }
     , node{ node }
 {
 }
 
-template <int K>
-inline bool KDTree<K>::QueryResult::operator<(const QueryResult& rhs) const
+template <int K, typename T>
+inline bool KDTree<K, T>::QueryResult::operator<(const QueryResult& rhs) const
 {
     return distance2 < rhs.distance2;
 }
 
-template <int K>
-inline double KDTree<K>::dist2(const Point& p1, const Point& p2)
+template <int K, typename T>
+inline T KDTree<K, T>::dist2(const Point& p1, const Point& p2)
 {
-    double d = 0.0;
+    T d = 0;
 
     for (int i = 0; i < K; ++i)
     {
@@ -140,20 +140,20 @@ inline double KDTree<K>::dist2(const Point& p1, const Point& p2)
     return d;
 }
 
-template <int K>
-inline KDTree<K>::KDTree(const std::span<Point>& points)
+template <int K, typename T>
+inline KDTree<K, T>::KDTree(const std::span<Point>& points)
 {
     BuildTree(points);
 }
 
-template <int K>
-inline KDTree<K>::~KDTree()
+template <int K, typename T>
+inline KDTree<K, T>::~KDTree()
 {
     DeleteTree();
 }
 
-template <int K>
-inline void KDTree<K>::BuildTree(const std::span<Point>& points)
+template <int K, typename T>
+inline void KDTree<K, T>::BuildTree(const std::span<Point>& points)
 {
     if (root != nullptr)
     {
@@ -171,27 +171,27 @@ inline void KDTree<K>::BuildTree(const std::span<Point>& points)
     root = BuildTree(points, indices.data(), (int)points.size(), 0);
 }
 
-template <int K>
-inline void KDTree<K>::DeleteTree()
+template <int K, typename T>
+inline void KDTree<K, T>::DeleteTree()
 {
     nodes.clear();
     root = nullptr;
 }
 
-template <int K>
-inline typename KDTree<K>::QueryResult KDTree<K>::QueryNearestNeighbor(const Point& target)
+template <int K, typename T>
+inline typename KDTree<K, T>::QueryResult KDTree<K, T>::QueryNearestNeighbor(const Point& target)
 {
     assert(root != nullptr);
 
     Node* nn;
-    double d = DBL_MAX;
+    T d = std::numeric_limits<T>::max();
     QueryNearestNeighbor(root, target, &nn, &d, 0);
 
     return QueryResult{ d, nn };
 }
 
-template <int K>
-inline std::vector<typename KDTree<K>::QueryResult> KDTree<K>::QueryKNearestNeighbors(const Point& target, int k)
+template <int K, typename T>
+inline std::vector<typename KDTree<K, T>::QueryResult> KDTree<K, T>::QueryKNearestNeighbors(const Point& target, int k)
 {
     assert(root != nullptr);
 
@@ -204,23 +204,23 @@ inline std::vector<typename KDTree<K>::QueryResult> KDTree<K>::QueryKNearestNeig
     return pq;
 }
 
-template <int K>
-template <typename T>
-inline void KDTree<K>::QueryRadius(const Point& target, double radius, T* callback)
+template <int K, typename T>
+template <typename F>
+inline void KDTree<K, T>::QueryRadius(const Point& target, T radius, F* callback)
 {
     assert(root != nullptr);
 
     QueryRadius(root, target, radius * radius, callback, 0);
 }
 
-template <int K>
-inline const typename KDTree<K>::Node* KDTree<K>::GetRootNode() const
+template <int K, typename T>
+inline const typename KDTree<K, T>::Node* KDTree<K, T>::GetRootNode() const
 {
     return root;
 }
 
-template <int K>
-inline typename KDTree<K>::Node* KDTree<K>::BuildTree(const std::span<Point>& points, int* indices, int count, int depth)
+template <int K, typename T>
+inline typename KDTree<K, T>::Node* KDTree<K, T>::BuildTree(const std::span<Point>& points, int* indices, int count, int depth)
 {
     if (count <= 0)
     {
@@ -248,15 +248,15 @@ inline typename KDTree<K>::Node* KDTree<K>::BuildTree(const std::span<Point>& po
     return &node;
 }
 
-template <int K>
-inline void KDTree<K>::QueryNearestNeighbor(Node* node, const Point& target, Node** nearest, double* minDist, int depth)
+template <int K, typename T>
+inline void KDTree<K, T>::QueryNearestNeighbor(Node* node, const Point& target, Node** nearest, T* minDist, int depth)
 {
     if (node == nullptr)
     {
         return;
     }
 
-    double d = dist2(target, node->point);
+    T d = dist2(target, node->point);
     if (d < *minDist)
     {
         *minDist = d;
@@ -284,22 +284,22 @@ inline void KDTree<K>::QueryNearestNeighbor(Node* node, const Point& target, Nod
 
     // We may need to check the other side of the tree
     // If the other side is closer than the radius, then we must recurse to the other side as well
-    double border = target[axis] - node->point[axis];
+    T border = target[axis] - node->point[axis];
     if (*minDist > border * border)
     {
         QueryNearestNeighbor(other, target, nearest, minDist, depth + 1);
     }
 }
 
-template <int K>
-inline void KDTree<K>::QueryKNearestNeighbors(Node* node, const Point& target, int k, std::vector<QueryResult>& pq, int depth)
+template <int K, typename T>
+inline void KDTree<K, T>::QueryKNearestNeighbors(Node* node, const Point& target, int k, std::vector<QueryResult>& pq, int depth)
 {
     if (node == nullptr)
     {
         return;
     }
 
-    double d = dist2(target, node->point);
+    T d = dist2(target, node->point);
     if (pq.size() < k || d < pq.front().distance2)
     {
         pq.emplace_back(d, node);
@@ -329,23 +329,23 @@ inline void KDTree<K>::QueryKNearestNeighbors(Node* node, const Point& target, i
 
     QueryKNearestNeighbors(next, target, k, pq, depth + 1);
 
-    double border = target[axis] - node->point[axis];
+    T border = target[axis] - node->point[axis];
     if (pq.size() < k || border * border < pq.front().distance2)
     {
         QueryKNearestNeighbors(other, target, k, pq, depth + 1);
     }
 }
 
-template <int K>
-template <typename T>
-inline void KDTree<K>::QueryRadius(Node* node, const Point& target, double radius2, T* callback, int depth)
+template <int K, typename T>
+template <typename F>
+inline void KDTree<K, T>::QueryRadius(Node* node, const Point& target, T radius2, F* callback, int depth)
 {
     if (node == nullptr)
     {
         return;
     }
 
-    double d = dist2(target, node->point);
+    T d = dist2(target, node->point);
     if (d < radius2)
     {
         callback->QueryRadiusCallback(d, static_cast<const Node*>(node));
@@ -369,7 +369,7 @@ inline void KDTree<K>::QueryRadius(Node* node, const Point& target, double radiu
 
     QueryRadius(next, target, radius2, callback, depth + 1);
 
-    double border = target[axis] - node->point[axis];
+    T border = target[axis] - node->point[axis];
     if (radius2 > border * border)
     {
         QueryRadius(other, target, radius2, callback, depth + 1);

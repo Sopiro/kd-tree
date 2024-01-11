@@ -14,12 +14,12 @@ inline void Srand(unsigned int seed)
     prng.seed(seed);
 }
 
-inline double Prand()
+inline float Prand()
 {
-    return double(prng()) / std::minstd_rand::max();
+    return float(prng()) / std::minstd_rand::max();
 }
 
-inline double Prand(double min, double max)
+inline float Prand(float min, float max)
 {
     return min + (max - min) * Prand();
 }
@@ -59,11 +59,11 @@ TEST_CASE("Nearest neighbor query")
     timer.Mark();
 
     // Brute force
-    double bd = DBL_MAX;
+    float bd = FLT_MAX;
     point bp = target;
     for (int i = 0; i < points.size(); ++i)
     {
-        double c = tree.dist2(target, points[i]);
+        float c = tree.dist2(target, points[i]);
 
         if (c < bd)
         {
@@ -116,18 +116,18 @@ TEST_CASE("Radius query")
     KDTree<2> tree(points);
 
     point target{ Prand(-10000, 10000), Prand(-10000, 10000) };
-    double radius = 100.0;
+    float radius = 100.0;
 
     struct TempCallback
     {
-        void QueryRadiusCallback(double distance2, const node* node)
+        void QueryRadiusCallback(float distance2, const node* node)
         {
-            double distance = sqrt(distance2);
+            float distance = sqrt(distance2);
             REQUIRE_EQ(distance < r, true);
             ++count;
         }
 
-        double r;
+        float r;
         int count;
     } callback;
 
